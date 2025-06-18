@@ -1,1 +1,7 @@
 ortools
+pydantic
+typing_extensions
+typing
+collections
+scipy
+
