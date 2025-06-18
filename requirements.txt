@@ -3,4 +3,5 @@ pydantic
 typing_extensions
 typing
 scipy
+streamlit
 
