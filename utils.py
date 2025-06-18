@@ -32,6 +32,7 @@ class allocated_student(BaseModel):
     project: Annotated[int,Field(ge=1,le=no_of_projects)]
     group: Annotated[int,Field(ge=1)]
     name: str
+    cpi: Annotated[float, Field(ge=0.00, le=10.00)]
     gender: Literal['male', 'female']
     department: Literal['AE','CE','CH','CL','CS','EC','EE','EN','EP','ES','ME','MM']
     allocated_preference: Annotated[int,Field(ge=0,le=100)]

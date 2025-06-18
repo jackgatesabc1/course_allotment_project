@@ -49,7 +49,7 @@ class CourseAllocator:
             section_id = group.section
             group_id = group.groupId
             for student in group.students:
-                data.append(allocated_student(section=section_id+1,project=project_id+1,group=group_id+1 ,name=student.name,gender= student.gender, #+1 because zero indexing to one indexing conversion
+                data.append(allocated_student(cpi=student.cpi,section=section_id+1,project=project_id+1,group=group_id+1 ,name=student.name,gender= student.gender, #+1 because zero indexing to one indexing conversion
                     department= student.department,
                     allocated_preference= student.preferences[project_id]))
         try:
