@@ -1,5 +1,4 @@
-Instructions to use: "python3 main.py", and then "streamlit run display_allocation.py"
-If you want to use different dataset, then uncomment the first line in main.py
+Instructions to use: See the Format Guidelines below for file formats. First choose the "Run the allocator" option and upload a file with correct format. Then it processes and outputs the allocations file. You can download any one of csv or json. Next select the option "View results of an allocation" in the website, and upload the allocations that you downloaded. It will then display the allocations and statistics.
 
 Quick glossary:
 1) Section: Initial division of total batch of students into 8 parts called as sections (S1 to S8). Each section is associated with a particular time slot (Eg: S1 is Monday 2PM-5PM)
@@ -31,6 +30,9 @@ Now, we need to form groups(of around size 6) of students who have the same proj
 
 
 Extra: 
+
+-> If you want to use different dataset, then refer to the files main.py and generate_and_save_students_data() function in utils.py
+
 -> sample_files folder contains generated data and some other data
 
 -> To run locally you can use python3 main.py(this has option for generating new data) or can also use streamlit run display_allocation.py
