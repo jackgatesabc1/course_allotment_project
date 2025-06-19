@@ -9,7 +9,6 @@ from utils import Student, allocated_student, Project, Group, Section, no_of_pro
 from section_allocator import sectionAllocator
 from project_allocator import projectAllocator
 from group_allocator import groupAllocator
-from display_allocation import display_allocation
 import json
 
 
@@ -40,39 +39,40 @@ class CourseAllocator:
         self.sections = sections
         return self.groups
     
-    def save_allocation(self,filetype:Literal['csv','json']='json'):
+    def save_allocation(self,filetype:Literal['csv','json']='json', filename:str="", dontsave=False):
         if not self.groups:
             raise ValueError("No groups allocated yet. Please run allocate() method first.")
-        if(filetype=='json'):
-            data=[]
-            for group in self.groups:
-                project_id = group.projectCode
-                section_id = group.section
-                group_id = group.groupId
-                for student in group.students:
-                    data.append(allocated_student(cpi=student.cpi,section=section_id+1,project=project_id+1,group=group_id+1 ,name=student.name,gender= student.gender, #+1 because zero indexing to one indexing conversion
-                        department= student.department,
-                        allocated_preference= student.preferences[project_id], preferences=student.preferences))
-            try:
-                with open("allocated_students_data.json", "w") as f:
-                    json.dump([student_data.model_dump() for student_data in data], f, indent=2)
-                print("JSON file saved successfully")
-            except Exception as e:
-                print("Error writing file:", e)
-        else:
-            data=[]
-            for group in self.groups:
-                project_id = group.projectCode
-                section_id = group.section
-                group_id = group.groupId
-                for student in group.students:
-                    data.append({'name':student.name,'gender': student.gender,'department': student.department,'cpi': student.cpi,'section':section_id+1,'project':project_id+1,'group':group_id+1 , #+1 because zero indexing to one indexing conversion 
+        
+        jsondata=[]
+        csvdata=[]
+        for group in self.groups:
+            project_id = group.projectCode
+            section_id = group.section
+            group_id = group.groupId
+            for student in group.students:
+                jsondata.append(allocated_student(cpi=student.cpi,section=section_id+1,project=project_id+1,group=group_id+1 ,name=student.name,gender= student.gender, #+1 because zero indexing to one indexing conversion
+                    department= student.department,
+                    allocated_preference= student.preferences[project_id], preferences=student.preferences))
+                csvdata.append({'name':student.name,'gender': student.gender,'department': student.department,'cpi': student.cpi,'section':section_id+1,'project':project_id+1,'group':group_id+1 , #+1 because zero indexing to one indexing conversion 
                         'allocated_preference': student.preferences[project_id], 'preferences':student.preferences})
-            try:
-                pd.DataFrame(data).to_csv('allocated_students_data.csv',index=False)
-                print("CSV file saved successfully")
-            except Exception as e:
-                print("Error writing file:", e)
+        if(filetype=='json'):
+            json_serialisable_data = [student_data.model_dump() for student_data in jsondata]
+            if(dontsave==False):
+                try:
+                    with open(f"allocations_files/allocated_students_data_{filename}.json", "w") as f:
+                        json.dump(json_serialisable_data, f, indent=2)
+                    print("JSON file saved successfully")
+                except Exception as e:
+                    print("Error writing file:", e)
+            return json.dumps(json_serialisable_data, indent=2).encode('utf-8')
+        else:
+            if(dontsave==False):
+                try:
+                    pd.DataFrame(csvdata).to_csv(f'allocations_files/allocated_students_data_{filename}.csv',index=False)
+                    print("CSV file saved successfully")
+                except Exception as e:
+                    print("Error writing file:", e)
+            return pd.DataFrame(csvdata).to_csv(index=False).encode('utf-8')
             
 
     

@@ -2,19 +2,130 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from collections import defaultdict
-from utils import Group, Student, Project, allocated_student
-from typing import List
+from utils import Group, Student, Project, allocated_student, generate_and_save_students_data
+from typing import List, Literal
 import os
 import copy
 import json
 import ast
 import matplotlib.pyplot as plt
+from course_allocator import CourseAllocator
+import utils
 
 #These must be hardcoded
 project_names = {1:'theme 1: Food wastage mitigation', 2:'theme 2: Outdoor spaces improvement', 3:'theme 3: Improving lifes of labourers', 4:'theme 4: Solution for easy cleaning', 5:'theme 5: Automating watering of plants', 6:'theme 6: Wheelchair design improvement'}
 section_names = {1:'S1: Mon 2PM-5PM', 3:'S3: Tue 2PM-5PM', 5:'S5: Thu 2PM-5PM', 7:'S7: Fri 2PM-5PM', 2:'S2: Mon 5:30PM-8:30PM', 4:'S4: Tue 5:30PM-8:30PM', 6:'S6: Thu 5:30PM-8:30PM', 8:'S8: Fri 5:30PM-8:30PM'}
 
 avg_cpis = []
+
+
+
+def display_readme(choicee: Literal['allocator','viewer','readme']):
+    if(choicee=='allocator'):
+        with st.expander("View Format Guidelines"):
+            st.markdown("""
+            **Expected Format for JSON:**
+            ```json
+            [
+            {
+                "name": "Rekha Sengupta",
+                "gender": "female",
+                "rollNumber": "23B3909",
+                "cpi": 7.73,
+                "department": "CL",
+                "preferences": [81, 13, 60, 8, 12, 73]
+            },
+            ...
+            ]
+            ```
+
+            **Expected Format for CSV:**
+            ```
+            name,gender,rollNumber,cpi,department,preferences
+            Rekha Sengupta,female,23B3909,7.73,CL,"[81, 13, 60, 8, 12, 73]"
+            ...
+            ```
+
+            - Ensure all fields are present and are in the given format
+            - Only `.csv` and `.json` files are supported
+            """)
+            st.write("Download sample files here:")
+            with open("sample_files/students_data_with_preferences.csv", "r", encoding="utf-8") as f:
+                csv_data = f.read()
+
+            st.download_button(
+                label="📄 Students data (sample) as csv file",
+                data=csv_data,
+                file_name="students_data_with_preferences.csv",
+                mime="text/csv"
+            )
+            with open("sample_files/students_data_with_preferences.json", "r", encoding="utf-8") as f:
+                json_data = f.read()
+
+            st.download_button(
+                label="📄 Students data (sample) as json file",
+                data=json_data,
+                file_name="students_data_with_preferences.json",
+                mime="application/json"
+            )
+    elif(choicee=='viewer'):
+        with st.expander("View Format Guidelines "):
+            st.markdown("""
+            **Expected Format for JSON:**
+            ```json
+            [
+            {
+                "name": "Rekha Sengupta",
+                "gender": "female",
+                "department": "CL",
+                "cpi": 7.73,
+                "section": 1,
+                "project": 1,
+                "group": 1,
+                "allocated_preference": 81,
+                "preferences": [81, 13, 60, 8, 12, 73]
+            },
+            ...
+            ]
+            ```
+
+            **Expected Format for CSV:**
+            ```
+            name,gender,department,cpi,section,project,group,allocated_preference,preferences
+            Aditya Reddy,male,CL,7.09,1,1,1,99,"[99, 11, 45, 6, 14, 2]"
+            ...
+            ```
+
+            - Ensure all fields are present and are in the given format
+            - Only `.csv` and `.json` files are supported
+            """)
+            st.write("Download sample files here:")
+            with open("sample_files/allocated_students_data.csv", "r", encoding="utf-8") as f:
+                csv_data = f.read()
+
+            st.download_button(
+                label="📄 Project allocations data (sample) as csv file",
+                data=csv_data,
+                file_name="allocated_students_data.csv",
+                mime="text/csv"
+            )
+            with open("sample_files/allocated_students_data.json", "r", encoding="utf-8") as f:
+                json_data = f.read()
+
+            st.download_button(
+                label="📄 Project allocations data (sample) as json file",
+                data=json_data,
+                file_name="allocated_students_data.json",
+                mime="application/json"
+            )
+    else:
+        with open("README.md", "r", encoding="utf-8") as file:
+            readme_content = file.read()
+            with st.expander("README"):
+                st.markdown(readme_content)
+        
+            
+
 
 def display_allocation(students_data: List[allocated_student]):
     st.title("Student Allocations by Section, Project, and Group")
@@ -213,50 +324,114 @@ def plot_group_cpis():
 
 def toggle_histogram():
     st.session_state.show_cpi_histogram = not st.session_state.show_cpi_histogram
+
+
+
 if __name__ == "__main__":
     st.set_page_config(page_title="Student Allocation Viewer", layout="wide")
-    st.title("📂 Import JSON or CSV File")
-    
-    uploaded_file = st.file_uploader("Upload a JSON or CSV file containing student data (ensure it has the correct format): Please refer to README for more info on format)", type=["json","csv"])
+    display_readme('readme')
 
-    if uploaded_file is not None:
-        try:
-            uploaded_file_name = uploaded_file.name.lower()
-            
-            if uploaded_file_name.endswith(".json"):
-                uploaded_file_data = json.load(uploaded_file)
-                students_data=[]
-                for s in uploaded_file_data:
-                    students_data.append(allocated_student.model_validate(s))
-                # students_data = [allocated_student.model_validate(s) for s in uploaded_file_data]
-                display_allocation_stats(students_data)
-                display_allocation(students_data)
+    st.title("DE 250 Student Project Allocation")
+    choice = st.radio("Choose:", 
+                      ["Run the allocator on students data and download the allocations","View results of an allocation"])
+
+    if choice == "Run the allocator on students data and download the allocations":
+        # st.subheader("⚙️ Running Allocator...")
+        display_readme('allocator')
+        uploaded_file = st.file_uploader("Upload a JSON or CSV file containing student data with preferences (ensure it has the correct format): Please refer to format guidelines for more info", type=["json","csv"])
+        list_of_students=[]
+        if uploaded_file is not None:
+            try:
+                uploaded_file_name = uploaded_file.name.lower()
+                if uploaded_file_name.endswith(".json"):
+                    uploaded_file_data = json.load(uploaded_file)
+                    for s in uploaded_file_data:
+                        if(not isinstance(s['preferences'],list)):
+                            s['preferences']= ast.literal_eval(s['preferences'])
+                        list_of_students.append(Student.model_validate(s))
+                    
+                elif uploaded_file_name.endswith(".csv"):
+                    df = pd.read_csv(uploaded_file)
+                    uploaded_file_data = df.to_dict(orient='records')
+                    for s in uploaded_file_data:
+                        if(not isinstance(s['preferences'],list)):
+                            s['preferences']= ast.literal_eval(s['preferences'])
+                        list_of_students.append(Student.model_validate(s))
+                else:
+                    st.error("Unsupported file format. Please upload a .csv or .json file")
+
                 
-            elif uploaded_file_name.endswith(".csv"):
-                df = pd.read_csv(uploaded_file)
-                uploaded_file_data = df.to_dict(orient='records')
-                students_data=[]
-                for s in uploaded_file_data:
-                    s['preferences']= ast.literal_eval(s['preferences'])
-                    students_data.append(allocated_student.model_validate(s))
-                # students_data = [allocated_student.model_validate(s) for s in uploaded_file_data]
+                utils.list_of_students = list_of_students
+                for student in list_of_students:
+                    utils.roll_to_student[student.rollNumber] = student #check whether python maps allow this
+                    utils.departments.add(student.department) #to store all departments, so that we can use it later in utils.py and group_allocator.py
+                    utils.student_count_per_department[student.department] += 1 #to store the number of students in each department, so that we can use it later in section_allocator.py
+
+                de250= CourseAllocator(list_of_students) #see utils.py for list_of_students
+                de250.allocate()
+
+                allocated_students_data_csv = de250.save_allocation('csv',dontsave=True) 
+                allocated_students_data_json = de250.save_allocation('json', dontsave=True)
+                st.download_button(
+                    label="Download allocations as CSV",
+                    data=allocated_students_data_csv,
+                    file_name='allocated_students_data.csv',
+                    mime='text/csv'
+                )
+                st.download_button(
+                    label="Download allocations as JSON",
+                    data=allocated_students_data_json,
+                    file_name='allocated_students_data.json',
+                    mime='application/json'
+                )
+            
+            except Exception as e:
+                    st.error(f"❌ Error: {e}")
+        else:
+            st.info("Please upload a JSON or CSV file to proceed.")
+
+
+    else:
+        display_readme('viewer')
+        uploaded_file = st.file_uploader("Upload a JSON or CSV file containing allocated students data (ensure it has the correct format): Please refer to format guidelines for more info", type=["json","csv"])
+
+        if uploaded_file is not None:
+            try:
+                uploaded_file_name = uploaded_file.name.lower()
+                
+                if uploaded_file_name.endswith(".json"):
+                    uploaded_file_data = json.load(uploaded_file)
+                    students_data=[]
+                    for s in uploaded_file_data:
+                        if(not isinstance(s['preferences'],list)):
+                            s['preferences']= ast.literal_eval(s['preferences'])
+                        students_data.append(allocated_student.model_validate(s))
+                    # students_data = [allocated_student.model_validate(s) for s in uploaded_file_data]                   
+                elif uploaded_file_name.endswith(".csv"):
+                    df = pd.read_csv(uploaded_file)
+                    uploaded_file_data = df.to_dict(orient='records')
+                    students_data=[]
+                    for s in uploaded_file_data:
+                        if(not isinstance(s['preferences'],list)):
+                            s['preferences']= ast.literal_eval(s['preferences'])
+                        students_data.append(allocated_student.model_validate(s))
+                    # students_data = [allocated_student.model_validate(s) for s in uploaded_file_data]
+                else:
+                    st.error("Unsupported file format. Please upload a .csv or .json file")
                 display_allocation_stats(students_data)
                 display_allocation(students_data)
-            else:
-                st.error("Unsupported file format. Please upload a .csv or .json file")
-            
-            if "show_cpi_histogram" not in st.session_state:
-                    st.session_state.show_cpi_histogram = False
-            # Button that toggles the histogram visibility
-            st.button("Group-CPI Distribution", on_click=toggle_histogram)
-            # Show plot only if toggle state is True
-            if st.session_state.show_cpi_histogram:
-                plot_group_cpis()
-    
-        except Exception as e:
-            st.error(f"❌ Failed to read file: {e}")
-    else:
-        st.info("Please upload a JSON or CSV file to proceed.")
+                if "show_cpi_histogram" not in st.session_state:
+                        st.session_state.show_cpi_histogram = False
+                # Button that toggles the histogram visibility
+                st.button("Group-CPI Distribution", on_click=toggle_histogram)
+                # Show plot only if toggle state is True
+                if st.session_state.show_cpi_histogram:
+                    plot_group_cpis()
+        
+            except Exception as e:
+                st.error(f"❌ Error: {e}")
+        else:
+            st.info("Please upload a JSON or CSV file to proceed.")
 
 
 
