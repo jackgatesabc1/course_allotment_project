@@ -1,4 +1,5 @@
-Instructions to use: See the Format Guidelines below for file formats. First choose the "Run the allocator" option and upload a file with correct format. Then it processes and outputs the allocations file. You can download any one of csv or json. Next select the option "View results of an allocation" in the website, and upload the allocations that you downloaded. It will then display the allocations and statistics.
+Instructions to use: 
+See the Format Guidelines below for file formats. We have also given sample data in the format guidelines that you can use to test the Project Allocator. First choose the "Run the allocator" option and upload a file with correct format. Then it processes and outputs the allocations file. You can download any one of csv or json. Next select the option "View results of an allocation" in the website, and upload the allocations that you downloaded. It will then display the allocations and statistics.
 
 Quick glossary:
 1) Section: Initial division of total batch of students into 8 parts called as sections (S1 to S8). Each section is associated with a particular time slot (Eg: S1 is Monday 2PM-5PM)
