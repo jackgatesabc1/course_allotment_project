@@ -14,11 +14,11 @@ Use 'typing' type consistency everywhere
 
 
 
-change distribution of preferences(non uniform and realistic)
+change distribution of preferences(non-uniform and realistic)
 deploy streamlit 
 add import and export json to streamlit
 
 
 Doubts:
-SOmetime when we run python3 main.py the allocated_students_data.json file is not modified although as per code it must be overwritten and modified. But if I run python3 main.py again, then it gets modified, what could be the reason?
+Sometime when we run python3 main.py the allocated_students_data.json file is not modified although as per code it must be overwritten and modified. But if I run python3 main.py again, then it gets modified, what could be the reason? Something is wrong with json, but what?
 

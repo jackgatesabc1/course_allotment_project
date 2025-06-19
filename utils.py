@@ -36,6 +36,8 @@ class allocated_student(BaseModel):
     gender: Literal['male', 'female']
     department: Literal['AE','CE','CH','CL','CS','EC','EE','EN','EP','ES','ME','MM']
     allocated_preference: Annotated[int,Field(ge=0,le=100)]
+    preferences: Annotated[List[Annotated[int, Field(ge=0, le=100)]],Field(min_length=no_of_projects, max_length=no_of_projects)]
+  
 
 df = pd.read_csv('students_data_with_preferences.csv')
 df['preferences'] = df['preferences'].apply(ast.literal_eval)
@@ -139,6 +141,9 @@ class variableContainer:
         return boolvar
 
 
+def gauss(low,high,sigma): #randomly generates an integer from a truncated gaussian distribution
+    mean = (low+high)/2
+    return int(round(truncnorm.rvs((low-mean)/sigma, (high-mean)/sigma, loc=mean, scale=sigma)))
             
 
 def generate_and_save_students_data(): #randomly generated CPI, preferences and saves it
@@ -150,8 +155,8 @@ def generate_and_save_students_data(): #randomly generated CPI, preferences and 
     # preferences = [[random.randint(0, 100) for _ in range(no_of_projects)] for _ in range(student_count)] 
     # cpis = [random.randint(600, 1000)/100 for _ in range(student_count)] 
        
-    #Non uniform preferences and cpis
-    preferences = [[random.randint(70, 100), random.randint(0,40), random.randint(60,100), random.randint(0,20), random.randint(0,35),random.randint(0,100)] for _ in range(student_count)] #randomly generated preferences
+    # Non-uniform preferences and cpis
+    preferences = [[gauss(60,100,15), gauss(0,40,10), gauss(40,100,20), gauss(0,30,5), gauss(0,20,5),gauss(0,100,40)] for _ in range(student_count)] #randomly generated preferences
     cpi_low, cpi_high, cpi_mean= 6,10,8
     std = 2
     a, b = (cpi_low - cpi_mean) / std, (cpi_high - cpi_mean) / std  # if std=1, mean=8

@@ -10,7 +10,7 @@ if __name__ == "__main__":
     list_of_students = [Student(**row) for row in df.to_dict(orient='records')]
     de250= CourseAllocator(list_of_students) #see utils.py for list_of_students
     de250.allocate()
-    de250.save_allocation()
+    de250.save_allocation('json') #You can mention type of file to save as here. (Either 'csv' or 'json')
     de250.get_allocation_metrics()
    
     

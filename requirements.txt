@@ -4,4 +4,5 @@ typing_extensions
 typing
 scipy
 streamlit
+matplotlib
 
