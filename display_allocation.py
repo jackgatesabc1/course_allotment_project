@@ -533,7 +533,7 @@ def run_allocator():
 if __name__ == "__main__":
     st.set_page_config(page_title="Student Allocation Viewer", layout="wide")
     display_readme('readme')
-    st.video('sample_files/rough.mp4')
+    # st.video('sample_files/rough.mp4')
 
     st.title("DE 250 Student Project Allocation")
     choice = st.radio("Choose:", 
