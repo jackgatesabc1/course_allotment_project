@@ -11,6 +11,8 @@ import ast
 import matplotlib.pyplot as plt
 from course_allocator import CourseAllocator
 import utils
+import io
+import seaborn as sns
 
 #These must be hardcoded
 project_names = {1:'theme 1: Food wastage mitigation', 2:'theme 2: Outdoor spaces improvement', 3:'theme 3: Improving lifes of labourers', 4:'theme 4: Solution for easy cleaning', 5:'theme 5: Automating watering of plants', 6:'theme 6: Wheelchair design improvement'}
@@ -19,10 +21,14 @@ section_names = {1:'S1: Mon 2PM-5PM', 3:'S3: Tue 2PM-5PM', 5:'S5: Thu 2PM-5PM', 
 avg_cpis = []
 
 
+if 'has_run' not in st.session_state:
+    st.session_state.has_run = 0
+
 
 def display_readme(choicee: Literal['allocator','viewer','readme']):
     if(choicee=='allocator'):
         with st.expander("View Format Guidelines"):
+            st.text("You can upload either a CSV file or a JSON file")
             st.markdown("""
             **Expected Format for JSON:**
             ```json
@@ -70,6 +76,7 @@ def display_readme(choicee: Literal['allocator','viewer','readme']):
             )
     elif(choicee=='viewer'):
         with st.expander("View Format Guidelines "):
+            st.text("You can upload either a CSV file or a JSON file")
             st.markdown("""
             **Expected Format for JSON:**
             ```json
@@ -159,34 +166,32 @@ def display_allocation(students_data: List[allocated_student]):
             project_tabs = st.tabs([f"📁 Project {project_names[selected_project]}" for selected_project in sorted(section_map[section].keys())])
             for i,selected_project in enumerate(sorted(section_map[section].keys())):
                 with project_tabs[i]:
-
-            # for selected_project in sorted(section_map[section].keys()):
-            #     with st.expander(f"📁 Project {project_names[selected_project]}", expanded=False):
-
-            # selected_project = st.selectbox(
-            #     f"Select a project in Section {section_names[section]}",
-            #     project_list,
-            #     key=f"select_project_section_{section}"
-            # )
                     avg_project_cpi = np.mean([s.cpi for group_students in section_map[section][selected_project].values() for s in group_students ])
                     avg_preference = np.mean([s.allocated_preference for group_students in section_map[section][selected_project].values() for s in group_students])
             
                     st.markdown(f"### 📁 Project {project_names[selected_project]}")
-                    st.markdown(f"""
-                        <div style="
-                            border-radius: 10px;
-                            padding: 16px;
-                            background-color: #f9f9f9;
-                            color: #111111;
-                            border: 1px solid #ccc;
-                            box-shadow: 1px 1px 8px rgba(0, 0, 0, 0.05);
-                            margin-bottom: 16px;
-                        ">
-                            <h4 style="margin-top: 0; font-size: 18px;">📌 <strong>Project Overview</strong></h4>
-                            <p style="margin: 6px 0;">📈 <strong>Average CPI:</strong> {avg_project_cpi:.2f}</p>
-                            <p style="margin: 6px 0;">🎯 <strong>Average Preference Score:</strong> {avg_preference:.2f}</p>
-                        </div>
-                    """, unsafe_allow_html=True)
+
+                    # st.markdown(f"""
+                    #     <div style="
+                    #         border-radius: 10px;
+                    #         padding: 16px;
+                    #         background-color: #f9f9f9;
+                    #         color: #111111;
+                    #         border: 1px solid #ccc;
+                    #         box-shadow: 1px 1px 8px rgba(0, 0, 0, 0.05);
+                    #         margin-bottom: 16px;
+                    #     ">
+                    #         <h4 style="margin-top: 0; font-size: 18px;">📌 <strong>Project Overview</strong></h4>
+                    #         <p style="margin: 6px 0;">📈 <strong>Average CPI:</strong> {avg_project_cpi:.2f}</p>
+                    #         <p style="margin: 6px 0;">🎯 <strong>Average Preference Score:</strong> {avg_preference:.2f}</p>
+                    #     </div>
+                    # """, unsafe_allow_html=True)
+
+                    col1,col2 = st.columns(2)
+                    col1.metric("Average CPI",f"{avg_project_cpi:.2f}", help="This is the average CPI of all the students in this project")
+                    col2.metric("Average Allotted Preference Score",f"{avg_preference:.2f}", help="This is the average allotted preference of all the students in this project")
+        
+
 
                     for group_id in sorted(section_map[section][selected_project].keys()):
                         st.markdown(f"**👥 Group {group_id}**")
@@ -196,15 +201,6 @@ def display_allocation(students_data: List[allocated_student]):
                         
                         
                         st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp; 📈 *Average CPI:* `{avg_group_cpi:.2f}`")
-
-                        # df = pd.DataFrame([{
-                        #     "Name": s.name,
-                        #     "Gender": s.gender,
-                        #     "Department": s.department,
-                        #     "Allocated preference": s.allocated_preference
-                        # } for s in group_students])
-
-                        # st.table(df)
 
                         rows = []
                         for s in group_students:    
@@ -238,9 +234,11 @@ def display_allocation_stats(students_data: List[allocated_student]):
     # Organize data by group ID
     
     section_map = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-
+    student_preferences = defaultdict(list)
     for student in students_data:
         section_map[student.section][student.project][student.group].append(student)
+        for project_code,project_preference in enumerate(student.preferences):
+            student_preferences[project_code].append(project_preference)
     min_avg_group_cpi = float('inf')
     max_avg_group_cpi = float('-inf')
 
@@ -284,41 +282,99 @@ def display_allocation_stats(students_data: List[allocated_student]):
     pref_std = np.std(preference_scores_of_groups) if preference_scores_of_groups.size > 0 else 0
     pref_min = np.min(preference_scores_of_groups) if preference_scores_of_groups.size > 0 else 0
 
-    st.markdown(f"""
-        <div style="
-            border-radius: 12px;
-            padding: 20px;
-            background-color: #ffffff;
-            color: #111111;
-            border: 1px solid #ddd;
-            box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
-        ">
-            <h3 style="margin-top: 0; font-size: 22px;">📊 <strong>Allocation Summary</strong></h3>
-            <ul style="line-height: 1.8; font-size: 16px; margin-left: -20px;">
-                <li>🧑‍🎓 <strong>Department Diversity:</strong> {dept_diversity:.2f}%</li>
-                <li>👩‍🔬 <strong>Gender Diversity:</strong> {gender_diversity:.2f}%</li>
-                <li>🎯 <strong>Average Preference Score:</strong> {pref_mean:.2f}</li>
-                <li>📉 <strong>Std. Deviation of Preference:</strong> {pref_std:.2f}</li>
-                <li>⛔ <strong>Minimum Preference Score:</strong> {pref_min:.2f}</li>
-                <li>📈 <strong>Minimum Group Avg. CPI:</strong> {min_avg_group_cpi:.2f}</li>
-                <li>📈 <strong>Maximum Group Avg. CPI:</strong> {max_avg_group_cpi:.2f}</li>
-            </ul>
-        </div>
-    """, unsafe_allow_html=True)
+    # st.markdown(f"""
+    #     <div style="
+    #         border-radius: 12px;
+    #         padding: 20px;
+    #         background-color: #ffffff;
+    #         color: #111111;
+    #         border: 1px solid #ddd;
+    #         box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
+    #     ">
+    #         <h3 style="margin-top: 0; font-size: 22px;">📊 <strong>Allocation Summary</strong></h3>
+    #         <ul style="line-height: 1.8; font-size: 16px; margin-left: -20px;">
+    #             <li>🧑‍🎓 <strong>Department Diversity:</strong> {dept_diversity:.2f}%</li>
+    #             <li>👩‍🔬 <strong>Gender Diversity:</strong> {gender_diversity:.2f}%</li>
+    #             <li>🎯 <strong>Average Preference Score:</strong> {pref_mean:.2f}</li>
+    #             <li>📉 <strong>Std. Deviation of Preference:</strong> {pref_std:.2f}</li>
+    #             <li>⛔ <strong>Minimum Preference Score:</strong> {pref_min:.2f}</li>
+    #             <li>📈 <strong>Minimum Group Avg. CPI:</strong> {min_avg_group_cpi:.2f}</li>
+    #             <li>📈 <strong>Maximum Group Avg. CPI:</strong> {max_avg_group_cpi:.2f}</li>
+    #         </ul>
+    #     </div>
+    # """, unsafe_allow_html=True)
+
+    row1 = st.columns(2)
+    row1[0].metric("🧑‍🎓 Dept. Diversity", f"{dept_diversity:.2f}%", help="Percentage of groups which have students of multiple departments")
+    row1[1].metric("👩‍🔬 Gender Diversity", f"{gender_diversity:.2f}%", help="Percentage of groups which have students of both genders")
+    row2 = st.columns(2)
+    row2[0].metric("🎯 Avg. Preference Score", f"{pref_mean:.2f}", help="Average allotted preference score for all students")
+    row2[1].metric("📉 Std. Dev. of Preference", f"{pref_std:.2f}", help="Standard deviation of allotted preference scores.")
+    row3 = st.columns(2)
+    row3[0].metric("⛔ Min Preference Score", f"{pref_min:.2f}", help="Lowest assigned preference score. Note that this might be low because many students didn't like a project but still someone has to take that project.")
+    row3[1].metric("📈 Min Group Avg. CPI", f"{min_avg_group_cpi:.2f}", help="Minimum average CPI among all groups.")
+    row4 = st.columns(1)
+    row4[0].metric("📈 Max Group Avg. CPI", f"{max_avg_group_cpi:.2f}", help="Maximum average CPI among all groups.")
+
+
+    # Preference scores summary:-
+    st.markdown("## 📊 Student Preferences Distribution")
+
+    # Plot in two rows
+    # for row in range(2):
+    #     cols = st.columns(3)  # 3 columns per row
+    #     for i in range(3):
+    #         idx = row * 3 + i
+    #         with cols[i]:
+    #             fig, ax = plt.subplots()
+    #             ax.hist(student_preferences[idx], bins=20, color='skyblue', edgecolor='black')
+    #             ax.set_title(f"Histogram for project {idx + 1}")
+    #             ax.set_xlim(0, 100)
+    #             st.pyplot(fig)
+
+
+    # Assuming student_preferences is a list of lists or arrays
+    for row in range(2):
+        cols = st.columns(3)  # 3 columns per row
+        for i in range(3):
+            idx = row * 3 + i
+            with cols[i]:
+                fig, ax = plt.subplots()
+                sns.histplot(student_preferences[idx], bins=20, kde=True, ax=ax, color='skyblue', edgecolor='black')
+                ax.set_title(f"Project {idx + 1}")
+                ax.set_xlim(0, 100)
+                ax.set_xlabel("Preference")
+                ax.set_ylabel("No of students")
+                st.pyplot(fig)
     
 
-def plot_group_cpis():
-    fig, ax = plt.subplots(figsize=(4, 2))  # smaller figure
-    bins = np.arange(6.0, 10.1, 0.2)
+# def plot_group_cpis():
+#     fig, ax = plt.subplots(figsize=(4, 2))  # smaller figure
+#     bins = np.arange(6.0, 10.1, 0.2)
 
-    ax.hist(avg_cpis, bins=bins, edgecolor='black', color='mediumseagreen')
-    ax.set_title("📊 Group CPI Distribution", fontsize=10)
+#     ax.hist(avg_cpis, bins=bins, edgecolor='black', color='mediumseagreen')
+#     ax.set_title("📊 Group CPI Distribution", fontsize=10)
+#     ax.set_xlabel("CPI Range", fontsize=9)
+#     ax.set_ylabel("No. of Groups", fontsize=9)
+#     ax.tick_params(axis='both', labelsize=8)
+#     ax.grid(True, linestyle='--', alpha=0.4)
+
+#     col1, col2, col3 = st.columns([1, 2, 1])  # narrow center column
+#     with col2:
+#         st.pyplot(fig, clear_figure=True)
+
+
+def plot_group_cpis():
+    fig, ax = plt.subplots(figsize=(4, 2)) # still using plt for figure creation
+    sns.histplot(avg_cpis, bins=np.arange(6.0, 10.1, 0.2), kde=False, color='mediumseagreen', edgecolor='black', ax=ax)
+
+    ax.set_title("Group CPI Distribution", fontsize=10)
     ax.set_xlabel("CPI Range", fontsize=9)
     ax.set_ylabel("No. of Groups", fontsize=9)
     ax.tick_params(axis='both', labelsize=8)
     ax.grid(True, linestyle='--', alpha=0.4)
 
-    col1, col2, col3 = st.columns([1, 2, 1])  # narrow center column
+    col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.pyplot(fig, clear_figure=True)
 
@@ -326,112 +382,170 @@ def toggle_histogram():
     st.session_state.show_cpi_histogram = not st.session_state.show_cpi_histogram
 
 
+### view allocation:
+def view_allocation(uploaded_file):
+    
+    if uploaded_file is not None:
+        try:
+            uploaded_file_name = uploaded_file.name.lower()
+            
+            if uploaded_file_name.endswith(".json"):
+                uploaded_file_data = json.load(uploaded_file)
+                students_data=[]
+                for s in uploaded_file_data:
+                    if(not isinstance(s['preferences'],list)):
+                        s['preferences']= ast.literal_eval(s['preferences'])
+                    students_data.append(allocated_student.model_validate(s))
+                # students_data = [allocated_student.model_validate(s) for s in uploaded_file_data]                   
+            elif uploaded_file_name.endswith(".csv"):
+                df = pd.read_csv(uploaded_file)
+                uploaded_file_data = df.to_dict(orient='records')
+                students_data=[]
+                for s in uploaded_file_data:
+                    if(not isinstance(s['preferences'],list)):
+                        s['preferences']= ast.literal_eval(s['preferences'])
+                    students_data.append(allocated_student.model_validate(s))
+                # students_data = [allocated_student.model_validate(s) for s in uploaded_file_data]
+            else:
+                st.error("Unsupported file format. Please upload a .csv or .json file")
+            display_allocation_stats(students_data)
+            display_allocation(students_data)
+            if "show_cpi_histogram" not in st.session_state:
+                    st.session_state.show_cpi_histogram = False
+            # Button that toggles the histogram visibility
+            st.button("Group-CPI Distribution", on_click=toggle_histogram)
+            # Show plot only if toggle state is True
+            if st.session_state.show_cpi_histogram:
+                plot_group_cpis()
+    
+        except Exception as e:
+            st.error(f"❌ Error: {e}")
+    else:
+        st.info("Please upload a JSON or CSV file containing allocations data to proceed. See guidelines above for file formats")
+        
+
+### run allocator function:
+def run_allocator():
+    display_readme('allocator')
+    if st.session_state.has_run == 1:
+
+        print("already present")
+        # Read from disk
+        with open("allocations_files/allocated_students_data_.csv", "rb") as f:
+            file_bytes_csv = f.read()
+
+        # Wrap in file-like object
+        allocated_students_csv = io.BytesIO(file_bytes_csv)
+        allocated_students_csv.name = "allocated_students.csv"
+        
+        with open("allocations_files/allocated_students_data_.json", "rb") as f:
+            file_bytes_json = f.read()
+
+        # Wrap in file-like object
+        allocated_students_json = io.BytesIO(file_bytes_json)
+        allocated_students_json.name = "student_allocation.csv"
+        
+        st.download_button(
+            label="Download allocations as CSV",
+            data=allocated_students_csv,
+            file_name='allocated_students_data.csv',
+            mime='text/csv'
+        )
+        st.download_button(
+            label="Download allocations as JSON",
+            data=allocated_students_json,
+            file_name='allocated_students_data.json',
+            mime='application/json'
+        )
+
+        # Use with your function
+        view_allocation(allocated_students_csv)
+        return
+    
+    uploaded_file = st.file_uploader("1", type=["json","csv"],label_visibility="hidden")
+    list_of_students=[]
+    if uploaded_file is not None:
+        try:
+            uploaded_file_name = uploaded_file.name.lower()
+            if uploaded_file_name.endswith(".json"):
+                uploaded_file_data = json.load(uploaded_file)
+                for s in uploaded_file_data:
+                    if(not isinstance(s['preferences'],list)):
+                        s['preferences']= ast.literal_eval(s['preferences'])
+                    list_of_students.append(Student.model_validate(s))
+                
+            elif uploaded_file_name.endswith(".csv"):
+                df = pd.read_csv(uploaded_file)
+                uploaded_file_data = df.to_dict(orient='records')
+                for s in uploaded_file_data:
+                    if(not isinstance(s['preferences'],list)):
+                        s['preferences']= ast.literal_eval(s['preferences'])
+                    list_of_students.append(Student.model_validate(s))
+            else:
+                st.error("Unsupported file format. Please upload a .csv or .json file")
+
+            
+            utils.list_of_students = list_of_students
+            for student in list_of_students:
+                utils.roll_to_student[student.rollNumber] = student #check whether python maps allow this
+                utils.departments.add(student.department) #to store all departments, so that we can use it later in utils.py and group_allocator.py
+                utils.student_count_per_department[student.department] += 1 #to store the number of students in each department, so that we can use it later in section_allocator.py
+
+            de250 = CourseAllocator(list_of_students) #see utils.py for list_of_students
+            de250.allocate()
+            allocated_students_data_csv = de250.save_allocation('csv', dontsave=False)
+            allocated_students_data_json = de250.save_allocation('json', dontsave=False)
+            st.download_button(
+                label="Download allocations as CSV",
+                data=allocated_students_data_csv,
+                file_name='allocated_students_data.csv',
+                mime='text/csv'
+            )
+            st.download_button(
+                label="Download allocations as JSON",
+                data=allocated_students_data_json,
+                file_name='allocated_students_data.json',
+                mime='application/json'
+            )
+            # Read from disk
+            with open("allocations_files/allocated_students_data_.csv", "rb") as f:
+                file_bytes = f.read()
+
+            # Wrap in file-like object
+            allocated_student = io.BytesIO(file_bytes)
+            allocated_student.name = "student_allocation.csv"
+
+            # Use with your function
+            view_allocation(allocated_student)
+            
+            st.session_state.has_run = 1
+        
+        except Exception as e:
+                st.error(f"❌ Error: {e}")
+    else:
+        st.info("Please upload a JSON or CSV file containing students data to proceed. See guidelines above for file formats")
+        
+
+
+
+
 
 if __name__ == "__main__":
     st.set_page_config(page_title="Student Allocation Viewer", layout="wide")
     display_readme('readme')
+    st.video('sample_files/rough.mp4')
 
     st.title("DE 250 Student Project Allocation")
     choice = st.radio("Choose:", 
-                      ["Run the allocator on students data and download the allocations","View results of an allocation"])
+                      ["Run the allocator on students data and download/view the allocations","View results of an allocation"])
 
-    if choice == "Run the allocator on students data and download the allocations":
+    if choice == "Run the allocator on students data and download/view the allocations":
         # st.subheader("⚙️ Running Allocator...")
-        display_readme('allocator')
-        uploaded_file = st.file_uploader("Upload a JSON or CSV file containing student data with preferences (ensure it has the correct format): Please refer to format guidelines for more info", type=["json","csv"])
-        list_of_students=[]
-        if uploaded_file is not None:
-            try:
-                uploaded_file_name = uploaded_file.name.lower()
-                if uploaded_file_name.endswith(".json"):
-                    uploaded_file_data = json.load(uploaded_file)
-                    for s in uploaded_file_data:
-                        if(not isinstance(s['preferences'],list)):
-                            s['preferences']= ast.literal_eval(s['preferences'])
-                        list_of_students.append(Student.model_validate(s))
-                    
-                elif uploaded_file_name.endswith(".csv"):
-                    df = pd.read_csv(uploaded_file)
-                    uploaded_file_data = df.to_dict(orient='records')
-                    for s in uploaded_file_data:
-                        if(not isinstance(s['preferences'],list)):
-                            s['preferences']= ast.literal_eval(s['preferences'])
-                        list_of_students.append(Student.model_validate(s))
-                else:
-                    st.error("Unsupported file format. Please upload a .csv or .json file")
-
-                
-                utils.list_of_students = list_of_students
-                for student in list_of_students:
-                    utils.roll_to_student[student.rollNumber] = student #check whether python maps allow this
-                    utils.departments.add(student.department) #to store all departments, so that we can use it later in utils.py and group_allocator.py
-                    utils.student_count_per_department[student.department] += 1 #to store the number of students in each department, so that we can use it later in section_allocator.py
-
-                de250= CourseAllocator(list_of_students) #see utils.py for list_of_students
-                de250.allocate()
-
-                allocated_students_data_csv = de250.save_allocation('csv',dontsave=True) 
-                allocated_students_data_json = de250.save_allocation('json', dontsave=True)
-                st.download_button(
-                    label="Download allocations as CSV",
-                    data=allocated_students_data_csv,
-                    file_name='allocated_students_data.csv',
-                    mime='text/csv'
-                )
-                st.download_button(
-                    label="Download allocations as JSON",
-                    data=allocated_students_data_json,
-                    file_name='allocated_students_data.json',
-                    mime='application/json'
-                )
-            
-            except Exception as e:
-                    st.error(f"❌ Error: {e}")
-        else:
-            st.info("Please upload a JSON or CSV file to proceed.")
-
+        run_allocator()
 
     else:
         display_readme('viewer')
-        uploaded_file = st.file_uploader("Upload a JSON or CSV file containing allocated students data (ensure it has the correct format): Please refer to format guidelines for more info", type=["json","csv"])
+        uploaded_file = st.file_uploader("2", type=["json","csv"], label_visibility="hidden")
 
-        if uploaded_file is not None:
-            try:
-                uploaded_file_name = uploaded_file.name.lower()
-                
-                if uploaded_file_name.endswith(".json"):
-                    uploaded_file_data = json.load(uploaded_file)
-                    students_data=[]
-                    for s in uploaded_file_data:
-                        if(not isinstance(s['preferences'],list)):
-                            s['preferences']= ast.literal_eval(s['preferences'])
-                        students_data.append(allocated_student.model_validate(s))
-                    # students_data = [allocated_student.model_validate(s) for s in uploaded_file_data]                   
-                elif uploaded_file_name.endswith(".csv"):
-                    df = pd.read_csv(uploaded_file)
-                    uploaded_file_data = df.to_dict(orient='records')
-                    students_data=[]
-                    for s in uploaded_file_data:
-                        if(not isinstance(s['preferences'],list)):
-                            s['preferences']= ast.literal_eval(s['preferences'])
-                        students_data.append(allocated_student.model_validate(s))
-                    # students_data = [allocated_student.model_validate(s) for s in uploaded_file_data]
-                else:
-                    st.error("Unsupported file format. Please upload a .csv or .json file")
-                display_allocation_stats(students_data)
-                display_allocation(students_data)
-                if "show_cpi_histogram" not in st.session_state:
-                        st.session_state.show_cpi_histogram = False
-                # Button that toggles the histogram visibility
-                st.button("Group-CPI Distribution", on_click=toggle_histogram)
-                # Show plot only if toggle state is True
-                if st.session_state.show_cpi_histogram:
-                    plot_group_cpis()
-        
-            except Exception as e:
-                st.error(f"❌ Error: {e}")
-        else:
-            st.info("Please upload a JSON or CSV file to proceed.")
-
-
+        view_allocation(uploaded_file)
 

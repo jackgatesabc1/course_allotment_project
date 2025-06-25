@@ -1,5 +1,11 @@
 Instructions to use: 
-See the Format Guidelines below for file formats. We have also given sample data in the format guidelines that you can use to test the Project Allocator. First choose the "Run the allocator" option and upload a file with correct format. Then it processes and outputs the allocations file. You can download any one of csv or json. Next select the option "View results of an allocation" in the website, and upload the allocations that you downloaded. It will then display the allocations and statistics.
+Watch the below video for a quick overview of how it works. 
+
+There are two choices: 
+1) Upload students data and the allocator will run the model and find the optimal allocations(in background) and then show you the allocations. You can also download this allocations file.
+2) If you already have a downloaded allocations file, then select "View the allocations" option and upload the file.
+
+See the Format Guidelines below for file formats. We have also given sample data in the format guidelines that you can use to test the Project Allocator.
 
 Quick glossary:
 1) Section: Initial division of total batch of students into 8 parts called as sections (S1 to S8). Each section is associated with a particular time slot (Eg: S1 is Monday 2PM-5PM)
@@ -23,11 +29,10 @@ We need to assign students to projects by keeping in mind two things:
 1) Preferences of students
 2) Diversity: Each project should get approximately equal distribution of grades of students (i.e no project should have only students with low grades), and also try to have an equal distribution of students of a department among the projects, so that each project has students of diverse departments. Gender diversity as well should be taken care of.
 
-Now, we need to form groups(of around size 6) of students who have the same project theme and section. The students will now work together as a group to finish their project. This group must be diverse. What exactly do we mean by diverse?
+Now, we need to form groups(of around size 6) of students who have the same project theme and section. The students will now work together as a group to finish their project. This group must be diverse. What exactly do we mean by diversity between groups?
 1) No group should have students of only low grades
 2) Each group should have students of multiple departments
 3) Gender diversity(try to maximise the number of groups which have both the genders)
-
 
 
 Extra: 

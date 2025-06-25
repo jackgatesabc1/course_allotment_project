@@ -5,4 +5,4 @@ typing
 scipy
 streamlit
 matplotlib
-
+seaborn
