@@ -15,6 +15,10 @@ no_of_projects =6
 no_of_sections = 8 #S1 to S8
 groupSize = 6
 department_literal = Literal['AE','CE','CH','CL','CS','EC','EE','EN','EP','ES','ME','MM']
+max_size_for_dept_diversity = 4 #maximum number of students from a single department in a group, if this is not satisfied, then the group is not considered to have department diversity
+#Assumption: These available slots will be given to us by the professor. Currently using last year's slots
+available_slots= {'CL': {0, 4}, 'ME': {0, 4}, 'MM': {1, 5}, 'CE': {1, 5}, 'CS': {2, 6}, 'AE': {2, 6}, 'CH': {2}, 'EN': {2, 6}, 'ES': {3, 7}, 'EC': {3, 7}, 'EP': {3, 7}, 'EE': {3, 7}}
+# student_count_per_department = {'CL': 145, 'ME': 196, 'MM': 132, 'CE': 168, 'CS': 185, 'AE': 81, 'CH': 28, 'EN': 46, 'ES': 45, 'EC': 35, 'EP': 60, 'EE': 204}
 
 class Student(BaseModel):
     name: str
@@ -55,7 +59,7 @@ class Section(BaseModel):
     def __init__(self, **data):
         super().__init__(**data)
         self._model = cp_model.CpModel()
-        self._projectAlphas = [[self._model.new_bool_var(f"projectAlpha_{student.rollNumber}_{project_id}") for project_id in range(no_of_projects)] for student in self.students]
+        self._projectAlphas = [[self._model.new_bool_var(f"projectAlpha_{student.rollNumber}_{project_id}") for project_id in range(no_of_projects)] for student in self.students] #check we are accessing self.students here, is it right?
 
 class Project(BaseModel):
     projectCode: Annotated[int,Field(ge=0,le=no_of_projects-1)] #note that project numbers are from 0 but not 1 (this is to maintain consistency while indexing)
@@ -131,9 +135,9 @@ class variableContainer:
         return allocatedStudents
     
     def departmentDiversity(self,model):
-        boolvar = model.new_bool_var(f'department_diversity_{id(self)}') #This is a boolean variable which will be true if group has
+        boolvar = model.new_bool_var(f'department_diversity_{id(self)}') #This is a boolean variable which will be true if group has department diversity
         for department in departments:
-            model.add(self.departmentSum(department) <= 4).only_enforce_if(boolvar)
+            model.add(self.departmentSum(department) <= max_size_for_dept_diversity).only_enforce_if(boolvar)
         return boolvar
 
 
@@ -178,7 +182,7 @@ def generate_and_save_students_data(filetype:Literal['json','csv']='csv'): #rand
     
 
 def absolute_value(x,model: cp_model.CpModel): #check the 100000 
-    absolute = model.new_int_var(0, 500000, f"abs_{id(x)}")  # Assuming a max value of 10000 for the absolute value variable
+    absolute = model.new_int_var(0, 500000, f"abs_{id(x)}")  # Assuming a max value of 500000 for the absolute value variable
     model.add(x<=absolute)
     model.add(x>=-1*absolute)
     return absolute

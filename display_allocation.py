@@ -18,6 +18,7 @@ import seaborn as sns
 project_names = {1:'theme 1: Food wastage mitigation', 2:'theme 2: Outdoor spaces improvement', 3:'theme 3: Improving lifes of labourers', 4:'theme 4: Solution for easy cleaning', 5:'theme 5: Automating watering of plants', 6:'theme 6: Wheelchair design improvement'}
 section_names = {1:'S1: Mon 2PM-5PM', 3:'S3: Tue 2PM-5PM', 5:'S5: Thu 2PM-5PM', 7:'S7: Fri 2PM-5PM', 2:'S2: Mon 5:30PM-8:30PM', 4:'S4: Tue 5:30PM-8:30PM', 6:'S6: Thu 5:30PM-8:30PM', 8:'S8: Fri 5:30PM-8:30PM'}
 
+
 avg_cpis = []
 
 
@@ -52,7 +53,7 @@ def display_readme(choicee: Literal['allocator','viewer','readme']):
             ...
             ```
 
-            - Ensure all fields are present and are in the given format
+            - Ensure all fields are present and are in the given format, and the length of preferences is equal to the number of projects
             - Only `.csv` and `.json` files are supported
             """)
             st.write("Download sample files here:")
@@ -103,7 +104,7 @@ def display_readme(choicee: Literal['allocator','viewer','readme']):
             ...
             ```
 
-            - Ensure all fields are present and are in the given format
+            - Ensure all fields are present and are in the given format, and the length of preferences is equal to the number of projects
             - Only `.csv` and `.json` files are supported
             """)
             st.write("Download sample files here:")
@@ -269,9 +270,9 @@ def display_allocation_stats(students_data: List[allocated_student]):
                 min_avg_group_cpi = min(min_avg_group_cpi, avg_group_cpi)
                 max_avg_group_cpi = max(max_avg_group_cpi, avg_group_cpi)
 
-                if female_present:
+                if female_present: #check
                     gender_diversity_count += 1
-                if len(departments) > 1:
+                if len(departments) > 1:   #check
                     department_diversity_count += 1
 
     dept_diversity = (department_diversity_count / total_groups) * 100 if total_groups > 0 else 0

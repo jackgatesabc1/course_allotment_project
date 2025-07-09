@@ -5,12 +5,10 @@ from pydantic import BaseModel, Field, constr, conint, confloat, StringConstrain
 from typing import Literal, List, Annotated
 from typing_extensions import Annotated
 import random
-from utils import Student, Section, variableContainer, absolute_value, student_count_per_department
+from utils import Student, Section, variableContainer, absolute_value, student_count_per_department, available_slots
 
 
-#Assumption: These available slots will be given to us by the professor. Currently using last year's slots
-available_slots= {'CL': {0, 4}, 'ME': {0, 4}, 'MM': {1, 5}, 'CE': {1, 5}, 'CS': {2, 6}, 'AE': {2, 6}, 'CH': {2}, 'EN': {2, 6}, 'ES': {3, 7}, 'EC': {3, 7}, 'EP': {3, 7}, 'EE': {3, 7}}
-# student_count_per_department = {'CL': 145, 'ME': 196, 'MM': 132, 'CE': 168, 'CS': 185, 'AE': 81, 'CH': 28, 'EN': 46, 'ES': 45, 'EC': 35, 'EP': 60, 'EE': 204}
+
 
 def sectionAllocator(students: List[Student],numberOfSections:int) -> List[Section]: # Divides students into sections
     model = cp_model.CpModel()
