@@ -5,13 +5,13 @@ from pydantic import BaseModel, Field, constr, conint, confloat, StringConstrain
 from typing import Literal, List, Annotated
 from typing_extensions import Annotated
 import random
-from utils import Project, Group, Section, variableContainer, absolute_value
+from utils import variableContainer, absolute_value
+import config
 
-def projectAllocator(section:Section, numberOfProjects:int) -> list[Project]:
+def projectAllocator(section:config.Section, numberOfProjects:int) -> list[config.Project]:
 
         model = section._model #check, whether instantiation in Section class is ok or not, ask professor Dominic
         numberOfStudents = len(section.students)
-        minNumberOfFemaleStudents = int((numberOfStudents//numberOfProjects) * 0.15)  # check, Assuming at least 15%
         # Constraints for project allocation
         for student_alphas in section._projectAlphas:
             model.add(sum(student_alphas) == 1)
@@ -22,8 +22,8 @@ def projectAllocator(section:Section, numberOfProjects:int) -> list[Project]:
              projectContainers.append(variableContainer(alphas,projectId))
         
         for project in projectContainers: #this project is of type variableContainer, dont confuse it with 'Project' class
-            model.add(project.numberOfStudents() >= 6*((numberOfStudents//numberOfProjects)//6))
-            model.add(project.numberOfStudents() <= 6*((numberOfStudents//numberOfProjects)//6)+6)  #check, this restriction of only allowing +1 range might fail to have a mathematical solution 
+            model.add(project.numberOfStudents() >= int((numberOfStudents//numberOfProjects)/1.5)) #check
+            model.add(project.numberOfStudents() <= int((numberOfStudents//numberOfProjects)*1.5))  #check, this restriction of only allowing +1 range might fail to have a mathematical solution 
 
         projectsize_bools =[] #these represent whether project size is multiple of 6 or not
         for projectId, project in enumerate(projectContainers):
@@ -43,7 +43,7 @@ def projectAllocator(section:Section, numberOfProjects:int) -> list[Project]:
         
 
         for projectId,project in enumerate(projectContainers):
-            model.add(6*project.femaleSum()>= project.numberOfStudents()) #check
+            model.add(int(1/config.min_female_proportion)*project.femaleSum()>= project.numberOfStudents()) #check
             abs_cpi.append(absolute_value(project.cpiSumScaled() - project.numberOfStudents()*scaled_median_cpi,model))
 
         
@@ -51,7 +51,7 @@ def projectAllocator(section:Section, numberOfProjects:int) -> list[Project]:
                         - sum(cpi_diff_from_median for cpi_diff_from_median in abs_cpi) + 10000*sum(projectsize_bools))
 
         solver = cp_model.CpSolver()
-        solver.parameters.max_time_in_seconds = 10.0
+        solver.parameters.max_time_in_seconds = 2
         status = solver.solve(model)
 
         if status != cp_model.OPTIMAL:
@@ -67,5 +67,5 @@ def projectAllocator(section:Section, numberOfProjects:int) -> list[Project]:
         projects = []
 
         for projectContainer in projectContainers:
-            projects.append(Project(projectCode=projectContainer.id, section=section.section, students=projectContainer.getAllocation(solver)))
+            projects.append(config.Project(projectCode=projectContainer.id, section=section.section, students=projectContainer.getAllocation(solver)))
         return projects

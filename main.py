@@ -1,8 +1,9 @@
 from course_allocator import CourseAllocator
-from utils import Student, generate_and_save_students_data
+from utils import generate_and_save_students_data
 import pandas as pd
 import ast
 import utils
+import config
 
 if __name__ == "__main__":
     # generate_and_save_students_data('csv')        #Generates new data and stores in sample_files folder
@@ -10,7 +11,7 @@ if __name__ == "__main__":
     df=pd.read_csv('sample_files/students_data_with_preferences.csv')
     if(not isinstance(df['preferences'].iloc[0],list)):
         df['preferences'] = df['preferences'].apply(ast.literal_eval)
-    list_of_students = [Student(**row) for row in df.to_dict(orient='records')]
+    list_of_students = [config.Student(**row) for row in df.to_dict(orient='records')]
     utils.list_of_students = list_of_students
     for student in list_of_students:
         utils.roll_to_student[student.rollNumber] = student #check whether python maps allow this

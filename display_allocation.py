@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from collections import defaultdict
-from utils import Group, Student, Project, allocated_student, generate_and_save_students_data
+from utils import generate_and_save_students_data
 from typing import List, Literal
 import os
 import copy
@@ -13,10 +13,13 @@ from course_allocator import CourseAllocator
 import utils
 import io
 import seaborn as sns
+import config
+import traceback
 
 #These must be hardcoded
-project_names = {1:'theme 1: Food wastage mitigation', 2:'theme 2: Outdoor spaces improvement', 3:'theme 3: Improving lifes of labourers', 4:'theme 4: Solution for easy cleaning', 5:'theme 5: Automating watering of plants', 6:'theme 6: Wheelchair design improvement'}
-section_names = {1:'S1: Mon 2PM-5PM', 3:'S3: Tue 2PM-5PM', 5:'S5: Thu 2PM-5PM', 7:'S7: Fri 2PM-5PM', 2:'S2: Mon 5:30PM-8:30PM', 4:'S4: Tue 5:30PM-8:30PM', 6:'S6: Thu 5:30PM-8:30PM', 8:'S8: Fri 5:30PM-8:30PM'}
+# project_names = {1:'theme 1: Food wastage mitigation', 2:'theme 2: Outdoor spaces improvement', 3:'theme 3: Improving lifes of labourers', 4:'theme 4: Solution for easy cleaning', 5:'theme 5: Automating watering of plants', 6:'theme 6: Wheelchair design improvement'}
+# section_names = {1:'S1: Mon 2PM-5PM', 3:'S3: Tue 2PM-5PM', 5:'S5: Thu 2PM-5PM', 7:'S7: Fri 2PM-5PM', 2:'S2: Mon 5:30PM-8:30PM', 4:'S4: Tue 5:30PM-8:30PM', 6:'S6: Thu 5:30PM-8:30PM', 8:'S8: Fri 5:30PM-8:30PM'}
+
 
 
 avg_cpis = []
@@ -135,7 +138,7 @@ def display_readme(choicee: Literal['allocator','viewer','readme']):
             
 
 
-def display_allocation(students_data: List[allocated_student]):
+def display_allocation(students_data: List[config.AllocatedStudent]):
     st.title("Student Allocations by Section, Project, and Group")
 
     # Organize students by section → project → group
@@ -156,21 +159,21 @@ def display_allocation(students_data: List[allocated_student]):
             selected_name = st.selectbox("Select a matching student", options)
 
             selected = next(s for s in matching_students if s.name == selected_name)
-            st.success(f"📌 {selected_name} is in Section {section_names[selected.section]}, "
-                       f"Project {project_names[selected.project]}, Group {selected.group}")
+            st.success(f"📌 {selected_name} is in Section {config.section_names[selected.section]}, "
+                       f"Project {config.project_names[selected.project]}, Group {selected.group}")
         else:
             st.warning("No matching student found.")
 
     # -------------------- Full Allocation Display --------------------
     for section in sorted(section_map):
-        with st.expander(f"📘 Section {section_names[section]}", expanded=False):
-            project_tabs = st.tabs([f"📁 Project {project_names[selected_project]}" for selected_project in sorted(section_map[section].keys())])
+        with st.expander(f"📘 Section {config.section_names[section]}", expanded=False):
+            project_tabs = st.tabs([f"📁 Project {config.project_names[selected_project]}" for selected_project in sorted(section_map[section].keys())])
             for i,selected_project in enumerate(sorted(section_map[section].keys())):
                 with project_tabs[i]:
                     avg_project_cpi = np.mean([s.cpi for group_students in section_map[section][selected_project].values() for s in group_students ])
                     avg_preference = np.mean([s.allocated_preference for group_students in section_map[section][selected_project].values() for s in group_students])
             
-                    st.markdown(f"### 📁 Project {project_names[selected_project]}")
+                    st.markdown(f"### 📁 Project {config.project_names[selected_project]}")
 
                     # st.markdown(f"""
                     #     <div style="
@@ -229,7 +232,7 @@ def display_allocation(students_data: List[allocated_student]):
 
 ###### Stats:
 
-def display_allocation_stats(students_data: List[allocated_student]):
+def display_allocation_stats(students_data: List[config.AllocatedStudent]):
     st.markdown("## 📊 Allocation Statistics")
 
     # Organize data by group ID
@@ -396,8 +399,8 @@ def view_allocation(uploaded_file):
                 for s in uploaded_file_data:
                     if(not isinstance(s['preferences'],list)):
                         s['preferences']= ast.literal_eval(s['preferences'])
-                    students_data.append(allocated_student.model_validate(s))
-                # students_data = [allocated_student.model_validate(s) for s in uploaded_file_data]                   
+                    students_data.append(config.AllocatedStudent.model_validate(s))
+                # students_data = [AllocatedStudent.model_validate(s) for s in uploaded_file_data]                   
             elif uploaded_file_name.endswith(".csv"):
                 df = pd.read_csv(uploaded_file)
                 uploaded_file_data = df.to_dict(orient='records')
@@ -405,8 +408,8 @@ def view_allocation(uploaded_file):
                 for s in uploaded_file_data:
                     if(not isinstance(s['preferences'],list)):
                         s['preferences']= ast.literal_eval(s['preferences'])
-                    students_data.append(allocated_student.model_validate(s))
-                # students_data = [allocated_student.model_validate(s) for s in uploaded_file_data]
+                    students_data.append(config.AllocatedStudent.model_validate(s))
+                # students_data = [AllocatedStudent.model_validate(s) for s in uploaded_file_data]
             else:
                 st.error("Unsupported file format. Please upload a .csv or .json file")
             display_allocation_stats(students_data)
@@ -420,7 +423,9 @@ def view_allocation(uploaded_file):
                 plot_group_cpis()
     
         except Exception as e:
-            st.error(f"❌ Error: {e}")
+            # st.error(f"❌ Error in view_allocation: {e}")
+            tb = traceback.format_exc()
+            st.error(f"❌ Error in view_allocation:\n\n{tb}")
     else:
         st.info("Please upload a JSON or CSV file containing allocations data to proceed. See guidelines above for file formats")
         
@@ -473,7 +478,7 @@ def run_allocator():
                 for s in uploaded_file_data:
                     if(not isinstance(s['preferences'],list)):
                         s['preferences']= ast.literal_eval(s['preferences'])
-                    list_of_students.append(Student.model_validate(s))
+                    list_of_students.append(config.Student.model_validate(s))
                 
             elif uploaded_file_name.endswith(".csv"):
                 df = pd.read_csv(uploaded_file)
@@ -481,7 +486,7 @@ def run_allocator():
                 for s in uploaded_file_data:
                     if(not isinstance(s['preferences'],list)):
                         s['preferences']= ast.literal_eval(s['preferences'])
-                    list_of_students.append(Student.model_validate(s))
+                    list_of_students.append(config.Student.model_validate(s))
             else:
                 st.error("Unsupported file format. Please upload a .csv or .json file")
 
@@ -522,7 +527,7 @@ def run_allocator():
             st.session_state.has_run = 1
         
         except Exception as e:
-                st.error(f"❌ Error: {e}")
+                st.error(f"❌ Error in run allocator: {e}")
     else:
         st.info("Please upload a JSON or CSV file containing students data to proceed. See guidelines above for file formats")
         
@@ -535,13 +540,72 @@ if __name__ == "__main__":
     st.set_page_config(page_title="Student Allocation Viewer", layout="wide")
     display_readme('readme')
     # st.video('sample_files/rough.mp4')
-
+    
     st.title("DE 250 Student Project Allocation")
+    # Ask user for project and section names
+    st.markdown("### Enter initial parameters for the allocator")
+    num_projects = st.number_input("Number of Projects", min_value=1, step=1, value=6)
+    num_sections = st.number_input("Number of Sections", min_value=1, step=1, value=8)
+    group_size = st.number_input("Group Size", min_value=1, step=1, value=6)
+
+    st.markdown("#### Enter Section Names")
+    section_names_input = {}
+    for i in range(1, num_sections + 1):
+        section_names_input[i] = st.text_input(f"Section {i} Name", value=f"Section {i}")
+
+    st.markdown("#### Enter list of departments (comma-separated, e.g. ME,EE,CL)")
+    departments_input = st.text_input("Departments", value="'AE','CE','CH','CL','CS','EC','EE','EN','EP','ES','ME','MM'")
+    departments_list = [dept.strip("'") for dept in departments_input.split(",") if dept.strip("'")]
+
+    # # Ask available slots for each department
+    # st.markdown("#### Enter available slots for each department (comma-separated section numbers, e.g. 1,3,5)")
+    # department_slots = {}
+    # for dept in departments_list:
+    #     slots_str = st.text_input(f"Available slots for {dept}", value=",".join(str(i) for i in range(1, num_sections + 1)))
+    #     # Parse and convert to zero-indexed integers
+    #     slots = [int(s.strip()) - 1 for s in slots_str.split(",") if s.strip().isdigit() and 1 <= int(s.strip()) <= num_sections]
+    #     department_slots[dept] = slots
+
+    #example {'CL': {0, 1}, 'ME': {0, 1}, 'MM': {0, 1}, 'CE': {0, 1}, 'CS': {0, 1}, 'AE': {0, 1}, 'CH': {0, 1}, 'EN': {0, 1}, 'ES': {0, 1}, 'EC': {0, 1}, 'EP': {0, 1}, 'EE': {0, 1}}
+
+    st.markdown("#### Enter available slots for each department as a dictionary (e.g. {'ME': {1,3}, 'EE': {2,4}})")
+    department_slots_input = st.text_input("Department slots dictionary", value="{'CL': {0, 4}, 'ME': {0, 4}, 'MM': {1, 5}, 'CE': {1, 5}, 'CS': {2, 6}, 'AE': {2, 6}, 'CH': {2,2}, 'EN': {2, 6}, 'ES': {3, 7}, 'EC': {3, 7}, 'EP': {3, 7}, 'EE': {3, 7}}")
+    try:
+        department_slots = ast.literal_eval(department_slots_input)
+        # Convert all values to lists of zero-indexed integers
+        for dept in department_slots:
+            department_slots[dept] = [int(s) for s in department_slots[dept] if isinstance(s, int) or (isinstance(s, str) and s.isdigit())]
+    except Exception as e:
+        st.error(f"Invalid department slots dictionary: {e}")
+        department_slots = {dept: list(range(num_sections)) for dept in departments_list}
+
+
+    st.markdown("#### Enter maximum size for department diversity (default is 4)")
+    max_size_for_department_diversity = st.number_input("Max size for department diversity", min_value=0, step=1, value=4)
+
+
+    st.markdown("#### Enter Project Names")
+    project_names_input = {}
+    for i in range(1, num_projects + 1):
+        project_names_input[i] = st.text_input(f"Project {i} Name", value=f"Project {i}")
+
+    
+
+    if st.button("Submit Project and Section Names"):
+        st.session_state.project_names = project_names_input
+        st.session_state.section_names = section_names_input
+        config.project_names = st.session_state.project_names
+        config.section_names = st.session_state.section_names
+        config.initialize_models(num_projects, num_sections, group_size, department_slots, departments_list, max_size_for_department_diversity) 
+        st.success("Project and Section names saved. You can now run the allocator below.")
+
+
     choice = st.radio("Choose:", 
                       ["Run the allocator on students data and download/view the allocations","View results of an allocation"])
 
     if choice == "Run the allocator on students data and download/view the allocations":
         # st.subheader("⚙️ Running Allocator...")
+
         run_allocator()
 
     else:

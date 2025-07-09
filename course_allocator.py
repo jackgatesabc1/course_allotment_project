@@ -5,28 +5,29 @@ from pydantic import BaseModel, Field, constr, conint, confloat, StringConstrain
 from typing import Literal, List, Annotated
 from typing_extensions import Annotated
 import random
-from utils import Student, allocated_student, Project, Group, Section, no_of_projects, no_of_sections, groupSize
+# from utils import Student, AllocatedStudent, Project, Group, Section
 from section_allocator import sectionAllocator
 from project_allocator import projectAllocator
 from group_allocator import groupAllocator
 import json
+import config
 
 
 class CourseAllocator:
-    def __init__(self, students: List[Student]):
+    def __init__(self, students: List[config.Student]):
         self.students = students
         self.rollToIndex = {student.rollNumber: i for i, student in enumerate(students)} #check, not needed, already calculated this in utils.py
         self.groups = []  # List to store allocated groups
 
         #These below values must match the global variables values in utils.py
-        self.numberOfSections = no_of_sections
-        self.numberOfProjects = no_of_projects
-        self.groupSize=groupSize
+        self.numberOfSections = config.no_of_sections
+        self.numberOfProjects = config.no_of_projects
+        self.groupSize=config.group_size
 
         # self.section_divider_model = cp_model.CpModel()
         # self.sectionAlphas = [[self.section_divider_model.new_bool_var(f"sectionAlpha_{student.rollNumber}_{section_id}") for section_id in range(self.numberOfSections)] for student in self.students]
     
-    def allocate(self) -> List[Group]:
+    def allocate(self) -> List[config.Group]:
         sections = sectionAllocator(self.students,self.numberOfSections)
         projects = []
         for section in sections:
@@ -50,7 +51,7 @@ class CourseAllocator:
             section_id = group.section
             group_id = group.groupId
             for student in group.students:
-                jsondata.append(allocated_student(cpi=student.cpi,section=section_id+1,project=project_id+1,group=group_id+1 ,name=student.name,gender= student.gender, #+1 because zero indexing to one indexing conversion
+                jsondata.append(config.AllocatedStudent(cpi=student.cpi,section=section_id+1,project=project_id+1,group=group_id+1 ,name=student.name,gender= student.gender, #+1 because zero indexing to one indexing conversion
                     department= student.department,
                     allocated_preference= student.preferences[project_id], preferences=student.preferences))
                 csvdata.append({'name':student.name,'gender': student.gender,'department': student.department,'cpi': student.cpi,'section':section_id+1,'project':project_id+1,'group':group_id+1 , #+1 because zero indexing to one indexing conversion 

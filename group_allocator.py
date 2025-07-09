@@ -5,9 +5,10 @@ from pydantic import BaseModel, Field, constr, conint, confloat, StringConstrain
 from typing import Literal, List, Annotated
 from typing_extensions import Annotated
 import random
-from utils import Group, Project, variableContainer
+from utils import variableContainer
+import config
 
-def groupAllocator(project: Project, groupSize: int) -> List[Group]:
+def groupAllocator(project: config.Project, groupSize: int) -> List[config.Group]:
         model = project._model
         numberOfStudents = len(project.students)
         numberOfGroups = numberOfStudents// groupSize
@@ -23,7 +24,7 @@ def groupAllocator(project: Project, groupSize: int) -> List[Group]:
 
         # print(groupSize)
         for group in groupContainers: #this group is of type variableContainer, dont confuse it with 'Group' class
-            model.add(group.numberOfStudents() >= groupSize)
+            model.add(group.numberOfStudents() >= groupSize) #check
            
         if(numberOfStudents % groupSize <=numberOfGroups):  #We are doing this to resolve an issue, which is: If suppose total 15 students in project and you want to divide them into groups, then it is not possible to divide them using only groups of size 6,7. We need atleast one group of size 8
             for group in groupContainers:
@@ -54,7 +55,7 @@ def groupAllocator(project: Project, groupSize: int) -> List[Group]:
 
         
         solver = cp_model.CpSolver()
-        solver.parameters.max_time_in_seconds = 10.0
+        solver.parameters.max_time_in_seconds = 1
         status = solver.solve(model)
 
         if status != cp_model.OPTIMAL:
@@ -71,6 +72,6 @@ def groupAllocator(project: Project, groupSize: int) -> List[Group]:
 
         groups = []
         for groupContainer in groupContainers:
-            groups.append(Group(groupId=groupContainer.id, projectCode=project.projectCode, section=project.section, students=groupContainer.getAllocation(solver)))
+            groups.append(config.Group(groupId=groupContainer.id, projectCode=project.projectCode, section=project.section, students=groupContainer.getAllocation(solver)))
 
         return groups

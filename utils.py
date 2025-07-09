@@ -9,77 +9,33 @@ import ast
 from collections import defaultdict
 from scipy.stats import truncnorm
 import os
+import config
 
 #These below values are imported in all other files, so here is the place where we fix these values
-no_of_projects =6 
-no_of_sections = 8 #S1 to S8
-groupSize = 6
-department_literal = Literal['AE','CE','CH','CL','CS','EC','EE','EN','EP','ES','ME','MM']
-max_size_for_dept_diversity = 4 #maximum number of students from a single department in a group, if this is not satisfied, then the group is not considered to have department diversity
+# no_of_projects =6 
+# no_of_sections = 8 #S1 to S8
+# groupSize = 6
+# department_literal = Literal['AE','CE','CH','CL','CS','EC','EE','EN','EP','ES','ME','MM']
+# max_size_for_dept_diversity = 4 #maximum number of students from a single department in a group, if this is not satisfied, then the group is not considered to have department diversity
 #Assumption: These available slots will be given to us by the professor. Currently using last year's slots
-available_slots= {'CL': {0, 4}, 'ME': {0, 4}, 'MM': {1, 5}, 'CE': {1, 5}, 'CS': {2, 6}, 'AE': {2, 6}, 'CH': {2}, 'EN': {2, 6}, 'ES': {3, 7}, 'EC': {3, 7}, 'EP': {3, 7}, 'EE': {3, 7}}
+# available_slots= {'CL': {0, 4}, 'ME': {0, 4}, 'MM': {1, 5}, 'CE': {1, 5}, 'CS': {2, 6}, 'AE': {2, 6}, 'CH': {2}, 'EN': {2, 6}, 'ES': {3, 7}, 'EC': {3, 7}, 'EP': {3, 7}, 'EE': {3, 7}}
+
+
 # student_count_per_department = {'CL': 145, 'ME': 196, 'MM': 132, 'CE': 168, 'CS': 185, 'AE': 81, 'CH': 28, 'EN': 46, 'ES': 45, 'EC': 35, 'EP': 60, 'EE': 204}
 
-class Student(BaseModel):
-    name: str
-    gender: Literal['male', 'female']
-    rollNumber: Annotated[str,StringConstraints(pattern=r"2\d[Bb]\d{4}")]
-    cpi: Annotated[float, Field(ge=0.00, le=10.00)]
-    department: department_literal
-    preferences: Annotated[List[Annotated[int, Field(ge=0, le=100)]],Field(min_length=no_of_projects, max_length=no_of_projects)]
+
+
+# These will hold your dynamic classes
 
     
-    def __init__(self,**data):
-        super().__init__(**data)
 
-class allocated_student(BaseModel):
-    section: Annotated[int,Field(ge=1,le=no_of_sections)] #note that here section numbers are from 1 but not 0, because this class is for real data
-    project: Annotated[int,Field(ge=1,le=no_of_projects)]
-    group: Annotated[int,Field(ge=1)]
-    name: str
-    cpi: Annotated[float, Field(ge=0.00, le=10.00)]
-    gender: Literal['male', 'female']
-    department: department_literal
-    allocated_preference: Annotated[int,Field(ge=0,le=100)]
-    preferences: Annotated[List[Annotated[int, Field(ge=0, le=100)]],Field(min_length=no_of_projects, max_length=no_of_projects)]
-  
-#to change, we shouldnt do anything here, everything must be in main.py or streamlit wala file
-list_of_students=[]
-departments = set() #to store all departments
+
+# other globals, unchanged
+list_of_students = []
+departments = set()
 roll_to_student = {}
-student_count_per_department = defaultdict(int) #to store the number of students in each department, so that we can use it later in section_allocator.py
+student_count_per_department = defaultdict(int)
 
-
-class Section(BaseModel):
-    section: Annotated[int,Field(ge=0,le=no_of_sections-1)] #note that section numbers are from 0 but not 1 (this is to maintain consistency while indexing)
-    students: List[Student]
-    _model: cp_model.CpModel = PrivateAttr() #check whether needed
-    _projectAlphas: list[list[cp_model.IntVar]] = PrivateAttr(default_factory=list) #check, uncomment this if needed
-
-    def __init__(self, **data):
-        super().__init__(**data)
-        self._model = cp_model.CpModel()
-        self._projectAlphas = [[self._model.new_bool_var(f"projectAlpha_{student.rollNumber}_{project_id}") for project_id in range(no_of_projects)] for student in self.students] #check we are accessing self.students here, is it right?
-
-class Project(BaseModel):
-    projectCode: Annotated[int,Field(ge=0,le=no_of_projects-1)] #note that project numbers are from 0 but not 1 (this is to maintain consistency while indexing)
-    section: Annotated[int,Field(ge=0,le=no_of_sections-1)]
-    students: List[Student]
-    _model: cp_model.CpModel = PrivateAttr() #check whether needed
-    _groupAlphas: list[list[cp_model.IntVar]] = PrivateAttr(default_factory=list) #check, uncomment this if needed
-
-    def __init__(self, **data):
-        super().__init__(**data)
-        no_of_groups = len(self.students)//groupSize
-        self._model = cp_model.CpModel()  
-        self._groupAlphas = [[self._model.new_bool_var(f"groupAlpha_{student.rollNumber}_{group_id}") for group_id in range(no_of_groups)] for student in self.students]
-
-
-class Group(BaseModel):
-    groupId: int
-    projectCode: Annotated[int,Field(ge=0,le=no_of_projects-1)]
-    section: Annotated[int,Field(ge=0,le=no_of_sections-1)]
-    students: List[Student] # list of roll numbers of students
 
 
 class variableContainer:
@@ -111,7 +67,7 @@ class variableContainer:
     def numberOfStudents(self):
         return sum(self.alphas)
     
-    def departmentSum(self, department: department_literal):
+    def departmentSum(self, department: config.department_literal):
         department_indices=[]
         for i in range(len(self.alphas)):
             if(self.index_to_student[i].department==department):
@@ -137,7 +93,7 @@ class variableContainer:
     def departmentDiversity(self,model):
         boolvar = model.new_bool_var(f'department_diversity_{id(self)}') #This is a boolean variable which will be true if group has department diversity
         for department in departments:
-            model.add(self.departmentSum(department) <= max_size_for_dept_diversity).only_enforce_if(boolvar)
+            model.add(self.departmentSum(department) <= config.max_size_for_dept_diversity).only_enforce_if(boolvar)
         return boolvar
 
 
@@ -167,7 +123,7 @@ def generate_and_save_students_data(filetype:Literal['json','csv']='csv'): #rand
 
     list_of_students = []
     for i,student in student_df.iterrows():
-        list_of_students.append(Student(name=student['name'], gender =student['gender']  ,rollNumber=student['rollNumber'],cpi=cpis[i], department=student['department'], preferences=preferences[i]))
+        list_of_students.append(config.Student(name=student['name'], gender =student['gender']  ,rollNumber=student['rollNumber'],cpi=cpis[i], department=student['department'], preferences=preferences[i]))
 
     df= pd.DataFrame([student.model_dump() for student in list_of_students])
     if filetype=='csv':

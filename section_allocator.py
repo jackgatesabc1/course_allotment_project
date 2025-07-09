@@ -5,19 +5,20 @@ from pydantic import BaseModel, Field, constr, conint, confloat, StringConstrain
 from typing import Literal, List, Annotated
 from typing_extensions import Annotated
 import random
-from utils import Student, Section, variableContainer, absolute_value, student_count_per_department, available_slots
+from utils import variableContainer, absolute_value, student_count_per_department
+import config
 
 
 
 
-def sectionAllocator(students: List[Student],numberOfSections:int) -> List[Section]: # Divides students into sections
+def sectionAllocator(students: List[config.Student],numberOfSections:int) -> List[config.Section]: # Divides students into sections
     model = cp_model.CpModel()
     sectionAlphas = [[model.new_bool_var(f"sectionAlpha_{student.rollNumber}_{section_id}") for section_id in range(numberOfSections)] for student in students]
 
     for i,student_alphas in enumerate(sectionAlphas):
         model.add(sum(student_alphas) == 1)
         for slot in range(numberOfSections):
-            if(slot not in available_slots[students[i].department]):
+            if(slot not in config.available_slots[students[i].department]):
                 model.add(student_alphas[slot] == 0)  # If the slot is not available for the student's department, set the variable to 0
 
 
@@ -27,16 +28,16 @@ def sectionAllocator(students: List[Student],numberOfSections:int) -> List[Secti
     for sectionId, alphas in enumerate(transpose):
         sectionContainers.append(variableContainer(alphas,sectionId))
 
-    #Constraints and objectives
+    # #Constraints and objectives
     for section_id, section in enumerate(sectionContainers):
-        model.add(section.numberOfStudents() >= len(students)//numberOfSections-20)  #Check
-        model.add(section.numberOfStudents() <= len(students)//numberOfSections+20)  
+        model.add(section.numberOfStudents() >= int((len(students)//numberOfSections)/1.5))  #Check
+        model.add(section.numberOfStudents() <= int((len(students)//numberOfSections)*1.5))  #check
 
 
     scaled_median_cpi = int(100*np.median([student.cpi for student in students])) #check
     abs_cpi = []
     for sectionId,section in enumerate(sectionContainers):
-        model.add(6*section.femaleSum()>= section.numberOfStudents()) #check
+        model.add(int(1/config.min_female_proportion)*section.femaleSum()>= section.numberOfStudents()) #check
         abs_cpi.append(absolute_value(section.cpiSumScaled() - section.numberOfStudents()*scaled_median_cpi,model))
 
 
@@ -53,7 +54,7 @@ def sectionAllocator(students: List[Student],numberOfSections:int) -> List[Secti
 
     #Constraint of equal splitting of departments into its available section 
     students_per_slot_differences = []
-    for department, slots in available_slots.items():
+    for department, slots in config.available_slots.items():
         no_of_slots= len(slots)
         total_students = student_count_per_department[department]
         for slot in slots: 
@@ -65,7 +66,7 @@ def sectionAllocator(students: List[Student],numberOfSections:int) -> List[Secti
     
 
     solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = 10.0
+    solver.parameters.max_time_in_seconds = 5
     status = solver.solve(model)
 
     if status != cp_model.OPTIMAL:
@@ -76,7 +77,7 @@ def sectionAllocator(students: List[Student],numberOfSections:int) -> List[Secti
 
     sections = []
     for sectionContainer in sectionContainers:
-        sections.append(Section(section=sectionContainer.id,students=sectionContainer.getAllocation(solver)))
+        sections.append(config.Section(section=sectionContainer.id,students=sectionContainer.getAllocation(solver)))
     return sections
 
 
