@@ -20,3 +20,7 @@ Sometime when we run python3 main.py the allocated_students_data.json file is no
 
 
 
+In preferences distributipn graphs, change it to account for different no of projects(currently its showing only for 6 projects)
+
+
+

@@ -84,6 +84,20 @@ def initialize_models(___no_of_projects: int, ___no_of_sections: int, ___group_s
                 ]
                 for student in self.students
             ]
+        def describe(self):
+            print(f"Section {self.section} has {len(self.students)} students.")
+            male_students = sum(1 for student in self.students if student.gender=='male')
+            female_students = sum(1 for student in self.students if student.gender=='female')
+            print(f"Section {self.section} has {male_students} males and {female_students} females")
+            student_count_per_department_in_section = defaultdict(int)
+            for student in self.students:
+                student_count_per_department_in_section[student.department] += 1
+            print(student_count_per_department_in_section)
+            # for department, count in student_count_per_department_in_section.items():
+            #     print(f"Department {department} has {count} students in section {self.section}.")
+
+
+
 
     class ProjectModel(BaseModel):
         projectCode: Annotated[int, Field(ge=0, le=no_of_projects - 1)]
@@ -103,6 +117,16 @@ def initialize_models(___no_of_projects: int, ___no_of_sections: int, ___group_s
                 ]
                 for student in self.students
             ]
+        def describe(self):
+            print(f"Project {self.projectCode} in section {self.section} has {len(self.students)} students.")
+            male_students = sum(1 for student in self.students if student.gender=='male')
+            female_students = sum(1 for student in self.students if student.gender=='female')
+            print(f"Project {self.projectCode} in Section {self.section} has {male_students} males and {female_students} females")
+            student_count_per_department_in_project = defaultdict(int)
+            for student in self.students:
+                student_count_per_department_in_project[student.department] += 1
+            print(student_count_per_department_in_project)
+
 
     class GroupModel(BaseModel):
         groupId: int

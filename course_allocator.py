@@ -62,7 +62,7 @@ class CourseAllocator:
                 try:
                     with open(f"allocations_files/allocated_students_data_{filename}.json", "w") as f:
                         json.dump(json_serialisable_data, f, indent=2)
-                    print("JSON file saved successfully")
+                    # print("JSON file saved successfully")
                 except Exception as e:
                     print("Error writing file:", e)
             return json.dumps(json_serialisable_data, indent=2).encode('utf-8')
@@ -70,7 +70,7 @@ class CourseAllocator:
             if(dontsave==False):
                 try:
                     pd.DataFrame(csvdata).to_csv(f'allocations_files/allocated_students_data_{filename}.csv',index=False)
-                    print("CSV file saved successfully")
+                    # print("CSV file saved successfully")
                 except Exception as e:
                     print("Error writing file:", e)
             return pd.DataFrame(csvdata).to_csv(index=False).encode('utf-8')

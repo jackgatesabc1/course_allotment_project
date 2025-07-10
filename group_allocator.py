@@ -51,7 +51,8 @@ def groupAllocator(project: config.Project, groupSize: int) -> List[config.Group
             groupsize_booleans.append(model.new_bool_var(f'groupsize_isperfect_{groupId}'))
             model.add(group.numberOfStudents()==groupSize).only_enforce_if(groupsize_booleans[-1])
 
-        model.maximize(10*sum(groupsize_booleans) + sum(gender_diversity_bools) +sum(groupContainer.departmentDiversity(model) for groupContainer in groupContainers) - sum(cpi for cpi in abs_cpi)) #We also want to maximise the number of groups which have size==groupSize
+        model.maximize(10*sum(groupsize_booleans) + sum(gender_diversity_bools) - sum(cpi for cpi in abs_cpi)) #We also want to maximise the number of groups which have size==groupSize
+        #+sum(groupContainer.departmentDiversity(model) for groupContainer in groupContainers) check, not including department diversity
 
         
         solver = cp_model.CpSolver()

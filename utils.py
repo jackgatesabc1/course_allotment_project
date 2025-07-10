@@ -53,6 +53,7 @@ class variableContainer:
             if(self.index_to_student[i].gender=='male'):
                 male_indices.append(i)
         return sum(self.alphas[i] for i in male_indices)
+
     
     def femaleSum(self):
         female_indices=[]
@@ -72,7 +73,7 @@ class variableContainer:
         for i in range(len(self.alphas)):
             if(self.index_to_student[i].department==department):
                 department_indices.append(i)
-        return sum(self.alphas[i] for i in department_indices)
+        return sum(self.alphas[i] for i in department_indices)+0
     
     def preferencesSum(self):
         list_of_preferences=[]
@@ -90,10 +91,10 @@ class variableContainer:
                 allocatedStudents.append(self.index_to_student[i])
         return allocatedStudents
     
-    def departmentDiversity(self,model):
+    def departmentDiversity(self,coef1, coef2, projectsize, model):
         boolvar = model.new_bool_var(f'department_diversity_{id(self)}') #This is a boolean variable which will be true if group has department diversity
         for department in departments:
-            model.add(self.departmentSum(department) <= config.max_size_for_dept_diversity).only_enforce_if(boolvar)
+            model.add(coef1*self.departmentSum(department) <= coef2*projectsize).only_enforce_if(boolvar)
         return boolvar
 
 

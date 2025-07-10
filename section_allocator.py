@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, constr, conint, confloat, StringConstrain
 from typing import Literal, List, Annotated
 from typing_extensions import Annotated
 import random
-from utils import variableContainer, absolute_value, student_count_per_department
+from utils import variableContainer, absolute_value, student_count_per_department 
 import config
 
 
@@ -21,7 +21,7 @@ def sectionAllocator(students: List[config.Student],numberOfSections:int) -> Lis
             if(slot not in config.available_slots[students[i].department]):
                 model.add(student_alphas[slot] == 0)  # If the slot is not available for the student's department, set the variable to 0
 
-
+    no_of_females = sum(1 for student in students if student.gender=='female')
     
     transpose = [[row[i] for row in sectionAlphas] for i in range(numberOfSections)]
     sectionContainers=[]
@@ -36,6 +36,7 @@ def sectionAllocator(students: List[config.Student],numberOfSections:int) -> Lis
 
     scaled_median_cpi = int(100*np.median([student.cpi for student in students])) #check
     abs_cpi = []
+
     for sectionId,section in enumerate(sectionContainers):
         model.add(int(1/config.min_female_proportion)*section.femaleSum()>= section.numberOfStudents()) #check
         abs_cpi.append(absolute_value(section.cpiSumScaled() - section.numberOfStudents()*scaled_median_cpi,model))
@@ -60,8 +61,15 @@ def sectionAllocator(students: List[config.Student],numberOfSections:int) -> Lis
         for slot in slots: 
             students_per_slot_differences.append(absolute_value(no_of_slots*sectionContainers[slot].departmentSum(department)-total_students,model))
 
+    gender_diversity_bools = []  # This will be used to check if
+
+    for sectionId,section in enumerate(sectionContainers):
+
+        gender_diversity_bools.append(absolute_value(section.femaleSum()-no_of_females//numberOfSections,model))
     
-    model.maximize(-sum(cpi_diff_from_median for cpi_diff_from_median in abs_cpi) -sum(students_per_slot_differences) )  # Objective function to maximize the number of sections with size multiple of 6
+        
+    
+    model.maximize(-sum(cpi_diff_from_median for cpi_diff_from_median in abs_cpi) -sum(students_per_slot_differences) - sum(gender_diversity for gender_diversity in gender_diversity_bools))  # check, add weightages for terms, Objective function to maximize the number of sections with size multiple of 6
 
     
 
@@ -78,6 +86,8 @@ def sectionAllocator(students: List[config.Student],numberOfSections:int) -> Lis
     sections = []
     for sectionContainer in sectionContainers:
         sections.append(config.Section(section=sectionContainer.id,students=sectionContainer.getAllocation(solver)))
+    for section in sections:
+        section.describe()
     return sections
 
 
